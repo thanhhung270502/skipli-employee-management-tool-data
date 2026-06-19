@@ -23,12 +23,16 @@ const io = new Server(httpServer, {
 
 initializeChatSocket(io);
 
-const PORT = parseInt(process.env.PORT ?? '5000', 10);
-
-httpServer.listen(PORT, () => {
-  console.log(`\n🚀 Skipli Backend running on http://localhost:${PORT}`);
-  console.log(`📡 Socket.io enabled`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV ?? 'development'}\n`);
-});
+// Only start the server locally if not running on Vercel
+if (!process.env.VERCEL) {
+  const PORT = parseInt(process.env.PORT ?? '5000', 10);
+  httpServer.listen(PORT, () => {
+    console.log(`\n🚀 Skipli Backend running on http://localhost:${PORT}`);
+    console.log(`📡 Socket.io enabled`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV ?? 'development'}\n`);
+  });
+}
 
 export { app, httpServer };
+export default app;
+
