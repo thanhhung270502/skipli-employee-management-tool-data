@@ -1,6 +1,13 @@
 export enum ETaskStatus {
   PENDING = "pending",
+  IN_PROGRESS = "in_progress",
   DONE = "done",
+}
+
+export enum ETaskPriority {
+  LOW = "low",
+  MEDIUM = "medium",
+  HIGH = "high",
 }
 
 export interface Task {
@@ -9,7 +16,9 @@ export interface Task {
   assignedTo: string;
   assignedToName: string;
   status: ETaskStatus;
+  priority: ETaskPriority;
   dueDate: Date | null;
+  startedAt?: Date | null;
   completedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -24,9 +33,11 @@ export interface CreateTaskRequest {
   description?: string;
   assignedTo: string;
   dueDate?: string;
+  priority?: ETaskPriority;
 }
 
 export interface CreateTaskResult {
   taskId: string;
   task: TaskPublic;
 }
+

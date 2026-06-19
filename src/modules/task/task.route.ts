@@ -20,6 +20,18 @@ ownerTaskRouter.get(
   requireOwner,
   taskController.listAllTasks
 );
+ownerTaskRouter.put(
+  "/:taskId",
+  authenticateToken,
+  requireOwner,
+  taskController.updateTask
+);
+ownerTaskRouter.delete(
+  "/:taskId",
+  authenticateToken,
+  requireOwner,
+  taskController.deleteTask
+);
 
 export const employeeTaskRouter = Router();
 
@@ -30,8 +42,15 @@ employeeTaskRouter.get(
   taskController.listMyTasks
 );
 employeeTaskRouter.put(
+  "/:taskId/in-progress",
+  authenticateToken,
+  requireEmployee,
+  taskController.markTaskInProgress
+);
+employeeTaskRouter.put(
   "/:taskId/done",
   authenticateToken,
   requireEmployee,
   taskController.markTaskDone
 );
+
