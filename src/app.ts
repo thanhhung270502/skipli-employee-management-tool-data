@@ -15,9 +15,36 @@ export const createApp = (): express.Application => {
   const app = express();
 
   app.use(helmet());
+
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3000',
+  ];
+
+  if (process.env.FRONTEND_URL) {
+    allowedOrigins.push(process.env.FRONTEND_URL);
+  }
+
   app.use(
     cors({
-      origin: process.env.FRONTEND_URL ?? 'http://localhost:3000',
+      origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl)
+        if (!origin) return callback(null, true);
+
+        const normalizedOrigin = origin.replace(/\/$/, '');
+        const isAllowed = allowedOrigins.some(allowed => {
+          const normalizedAllowed = allowed.replace(/\/$/, '');
+          return normalizedOrigin === normalizedAllowed;
+        });
+
+        if (isAllowed || allowedOrigins.includes('*')) {
+          callback(null, true);
+        } else {
+          console.warn(`[CORS] Blocked request from origin: ${origin}`);
+          callback(null, false);
+        }
+      },
       credentials: true,
     })
   );
