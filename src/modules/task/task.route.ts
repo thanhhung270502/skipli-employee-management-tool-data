@@ -53,4 +53,10 @@ employeeTaskRouter.put(
   requireEmployee,
   taskController.markTaskDone
 );
+employeeTaskRouter.put(
+  "/:taskId/pending",
+  authenticateToken,
+  requireEmployee,
+  taskController.markTaskPending
+);
 

@@ -11,6 +11,13 @@ export const createEmployeeSchema = Joi.object<CreateEmployeeRequest>({
   department: Joi.string().trim().required(),
   phone: Joi.string().trim().optional().allow(""),
   role: Joi.string().trim().optional(),
+  workSchedule: Joi.object({
+    days: Joi.array().items(Joi.string()).required(),
+    startTime: Joi.string().required(),
+    endTime: Joi.string().required(),
+  })
+    .optional()
+    .allow(null),
 });
 
 export const updateEmployeeSchema = Joi.object<UpdateEmployeeRequest>({

@@ -29,3 +29,20 @@ export interface VerifyInviteResult {
   name: string;
   email: string;
 }
+
+export interface LoginUsernameRequest {
+  username: string;
+  password: string;
+}
+
+export interface LoginUsernameResult {
+  token: string;
+  role: "employee";
+  employee: {
+    id: string;
+    name: string;
+    email: string;
+    department: string;
+    role: string;
+  };
+}

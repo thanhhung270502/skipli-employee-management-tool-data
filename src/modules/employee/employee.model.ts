@@ -33,6 +33,7 @@ export interface CreateEmployeeRequest {
   department: string;
   phone?: string;
   role?: string;
+  workSchedule?: WorkSchedule | null;
 }
 
 export interface UpdateEmployeeRequest {

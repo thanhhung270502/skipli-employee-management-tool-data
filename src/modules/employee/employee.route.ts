@@ -26,6 +26,12 @@ ownerEmployeeRouter.get(
   requireOwner,
   employeeController.getEmployee
 );
+ownerEmployeeRouter.get(
+  "/:employeeId/tasks",
+  authenticateToken,
+  requireOwner,
+  employeeController.getEmployeeTasks
+);
 ownerEmployeeRouter.put(
   "/:employeeId",
   authenticateToken,

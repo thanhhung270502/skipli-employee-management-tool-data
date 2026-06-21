@@ -7,5 +7,6 @@ router.post("/login-email", employeeAuthController.loginEmail);
 router.post("/validate-access-code", employeeAuthController.validateAccessCode);
 router.post("/setup-account", employeeAuthController.setupAccount);
 router.get("/verify-invite/:token", employeeAuthController.verifyInvite);
+router.post("/login-username", employeeAuthController.loginUsername);
 
 export default router;

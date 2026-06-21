@@ -70,7 +70,7 @@ export const createEmployee = async (
     isSetup: false,
     username: null,
     passwordHash: null,
-    workSchedule: null,
+    workSchedule: data.workSchedule ?? null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

@@ -6,6 +6,7 @@ import { validateEnv } from './common/config/env';
 import { initializeFirebase } from './common/services/firebase';
 import { createApp } from './app';
 import { initializeChatSocket } from './modules/chat';
+import { initializeTaskSocket } from './modules/task';
 
 validateEnv();
 initializeFirebase();
@@ -21,7 +22,10 @@ const io = new Server(httpServer, {
   },
 });
 
+app.set('io', io);
+
 initializeChatSocket(io);
+initializeTaskSocket(io);
 
 // Only start the server locally if not running on Vercel
 if (!process.env.VERCEL) {

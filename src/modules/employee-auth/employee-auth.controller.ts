@@ -7,6 +7,7 @@ import {
   validateLoginEmail,
   validateSetupAccount,
   validateValidateAccessCode,
+  validateLoginUsername,
 } from "./employee-auth.validator";
 import * as employeeAuthService from "./employee-auth.service";
 
@@ -89,6 +90,27 @@ export const verifyInvite = async (
     }
 
     const result = await employeeAuthService.verifyInvite(token);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    handleControllerError(err, res, next);
+  }
+};
+
+export const loginUsername = async (
+  req: { body: unknown },
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { error, value } = validateLoginUsername(req.body);
+    if (error) {
+      res
+        .status(400)
+        .json({ success: false, message: getValidationMessage(error) });
+      return;
+    }
+
+    const result = await employeeAuthService.loginUsername(value);
     res.json({ success: true, ...result });
   } catch (err) {
     handleControllerError(err, res, next);

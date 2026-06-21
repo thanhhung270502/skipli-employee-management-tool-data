@@ -77,9 +77,10 @@ export const listMyTasks = async (
 export const markTaskInProgress = async (
   taskId: string,
   employeeId: string
-): Promise<void> => {
+): Promise<TaskPublic> => {
   const db = getDb();
-  const taskDoc = await db.collection("tasks").doc(taskId).get();
+  const taskDocRef = db.collection("tasks").doc(taskId);
+  const taskDoc = await taskDocRef.get();
 
   if (!taskDoc.exists) {
     throw new AppError("Task not found", 404);
@@ -90,23 +91,52 @@ export const markTaskInProgress = async (
     throw new AppError("This task is not assigned to you", 403);
   }
 
-  if (task.status === ETaskStatus.DONE) {
-    throw new AppError("Cannot change status of a completed task", 400);
-  }
-
-  await taskDoc.ref.update({
+  const updates = {
     status: ETaskStatus.IN_PROGRESS,
     startedAt: new Date(),
+    completedAt: null,
     updatedAt: new Date(),
-  });
+  };
+
+  await taskDocRef.update(updates);
+  return { id: taskId, ...task, ...updates } as TaskPublic;
+};
+
+export const markTaskPending = async (
+  taskId: string,
+  employeeId: string
+): Promise<TaskPublic> => {
+  const db = getDb();
+  const taskDocRef = db.collection("tasks").doc(taskId);
+  const taskDoc = await taskDocRef.get();
+
+  if (!taskDoc.exists) {
+    throw new AppError("Task not found", 404);
+  }
+
+  const task = taskDoc.data()!;
+  if (task.assignedTo !== employeeId) {
+    throw new AppError("This task is not assigned to you", 403);
+  }
+
+  const updates = {
+    status: ETaskStatus.PENDING,
+    startedAt: null,
+    completedAt: null,
+    updatedAt: new Date(),
+  };
+
+  await taskDocRef.update(updates);
+  return { id: taskId, ...task, ...updates } as TaskPublic;
 };
 
 export const markTaskDone = async (
   taskId: string,
   employeeId: string
-): Promise<void> => {
+): Promise<TaskPublic> => {
   const db = getDb();
-  const taskDoc = await db.collection("tasks").doc(taskId).get();
+  const taskDocRef = db.collection("tasks").doc(taskId);
+  const taskDoc = await taskDocRef.get();
 
   if (!taskDoc.exists) {
     throw new AppError("Task not found", 404);
@@ -117,11 +147,14 @@ export const markTaskDone = async (
     throw new AppError("This task is not assigned to you", 403);
   }
 
-  await taskDoc.ref.update({
+  const updates = {
     status: ETaskStatus.DONE,
     completedAt: new Date(),
     updatedAt: new Date(),
-  });
+  };
+
+  await taskDocRef.update(updates);
+  return { id: taskId, ...task, ...updates } as TaskPublic;
 };
 
 export const updateTask = async (
@@ -171,7 +204,7 @@ export const updateTask = async (
   return { id: taskId, ...updatedTask } as TaskPublic;
 };
 
-export const deleteTask = async (taskId: string): Promise<void> => {
+export const deleteTask = async (taskId: string): Promise<TaskPublic> => {
   const db = getDb();
   const taskDocRef = db.collection("tasks").doc(taskId);
   const taskDoc = await taskDocRef.get();
@@ -180,6 +213,8 @@ export const deleteTask = async (taskId: string): Promise<void> => {
     throw new AppError("Task not found", 404);
   }
 
+  const taskData = { id: taskId, ...taskDoc.data() } as TaskPublic;
   await taskDocRef.delete();
+  return taskData;
 };
 

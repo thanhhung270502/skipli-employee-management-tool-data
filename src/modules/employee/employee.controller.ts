@@ -10,6 +10,7 @@ import {
   validateUpdateProfile,
 } from "./employee.validator";
 import * as employeeService from "./employee.service";
+import { listMyTasks } from "../task/task.service";
 
 export const listEmployees = async (
   _req: AuthRequest,
@@ -153,6 +154,27 @@ export const updateProfile = async (
 
     await employeeService.updateProfile(user.employeeId, value);
     res.json({ success: true, message: "Profile updated" });
+  } catch (err) {
+    handleControllerError(err, res, next);
+  }
+};
+
+export const getEmployeeTasks = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { employeeId } = req.params;
+    if (!employeeId) {
+      res
+        .status(400)
+        .json({ success: false, message: "employeeId is required" });
+      return;
+    }
+
+    const tasks = await listMyTasks(employeeId);
+    res.json({ success: true, tasks });
   } catch (err) {
     handleControllerError(err, res, next);
   }

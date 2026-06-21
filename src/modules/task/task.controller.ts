@@ -6,6 +6,7 @@ import {
 } from "../../common/utils/controller.util";
 import { validateCreateTask, validateUpdateTask } from "./task.validator";
 import * as taskService from "./task.service";
+import { emitTaskUpdated } from "./task.socket";
 
 export const createTask = async (
   req: AuthRequest,
@@ -22,6 +23,12 @@ export const createTask = async (
     }
 
     const { taskId, task } = await taskService.createTask(value);
+
+    const io = req.app.get("io");
+    if (io) {
+      emitTaskUpdated(io, task);
+    }
+
     res.status(201).json({ success: true, taskId, task });
   } catch (err) {
     handleControllerError(err, res, next);
@@ -69,8 +76,14 @@ export const markTaskInProgress = async (
       return;
     }
 
-    await taskService.markTaskInProgress(taskId, user.employeeId);
-    res.json({ success: true, message: "Task marked as in progress" });
+    const updatedTask = await taskService.markTaskInProgress(taskId, user.employeeId);
+
+    const io = req.app.get("io");
+    if (io) {
+      emitTaskUpdated(io, updatedTask);
+    }
+
+    res.json({ success: true, message: "Task marked as in progress", task: updatedTask });
   } catch (err) {
     handleControllerError(err, res, next);
   }
@@ -90,8 +103,41 @@ export const markTaskDone = async (
       return;
     }
 
-    await taskService.markTaskDone(taskId, user.employeeId);
-    res.json({ success: true, message: "Task marked as done" });
+    const updatedTask = await taskService.markTaskDone(taskId, user.employeeId);
+
+    const io = req.app.get("io");
+    if (io) {
+      emitTaskUpdated(io, updatedTask);
+    }
+
+    res.json({ success: true, message: "Task marked as done", task: updatedTask });
+  } catch (err) {
+    handleControllerError(err, res, next);
+  }
+};
+
+export const markTaskPending = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const user = req.user as JwtEmployeePayload;
+    const { taskId } = req.params;
+
+    if (!taskId) {
+      res.status(400).json({ success: false, message: "taskId is required" });
+      return;
+    }
+
+    const updatedTask = await taskService.markTaskPending(taskId, user.employeeId);
+
+    const io = req.app.get("io");
+    if (io) {
+      emitTaskUpdated(io, updatedTask);
+    }
+
+    res.json({ success: true, message: "Task marked as pending", task: updatedTask });
   } catch (err) {
     handleControllerError(err, res, next);
   }
@@ -118,6 +164,12 @@ export const updateTask = async (
     }
 
     const updatedTask = await taskService.updateTask(taskId, value);
+
+    const io = req.app.get("io");
+    if (io) {
+      emitTaskUpdated(io, updatedTask);
+    }
+
     res.json({ success: true, task: updatedTask });
   } catch (err) {
     handleControllerError(err, res, next);
@@ -136,10 +188,15 @@ export const deleteTask = async (
       return;
     }
 
-    await taskService.deleteTask(taskId);
+    const deletedTask = await taskService.deleteTask(taskId);
+
+    const io = req.app.get("io");
+    if (io) {
+      emitTaskUpdated(io, deletedTask, true);
+    }
+
     res.json({ success: true, message: "Task deleted successfully" });
   } catch (err) {
     handleControllerError(err, res, next);
   }
 };
-

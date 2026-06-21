@@ -10,6 +10,7 @@ import employeeAuthRouter from './modules/employee-auth';
 import { ownerEmployeeRouter, profileRouter } from './modules/employee';
 import { ownerTaskRouter, employeeTaskRouter } from './modules/task';
 import chatRouter from './modules/chat';
+import specRouter from './modules/spec/spec.route';
 
 export const createApp = (): express.Application => {
   const app = express();
@@ -87,6 +88,7 @@ export const createApp = (): express.Application => {
   app.use('/api/owner/tasks', ownerTaskRouter);
   app.use('/api/employee/tasks', employeeTaskRouter);
   app.use('/api/chat', chatRouter);
+  app.use('/api', specRouter);
 
   app.use(notFound);
   app.use(errorHandler);

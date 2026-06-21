@@ -14,9 +14,11 @@ import type {
   ValidateAccessCodeRequest,
   ValidateAccessCodeResult,
   VerifyInviteResult,
+  LoginUsernameRequest,
+  LoginUsernameResult,
 } from "./employee-auth.model";
 
-export const loginEmail = async (data: LoginEmailRequest): Promise<void> => {
+export const loginEmail = async (data: LoginEmailRequest): Promise<string> => {
   const { email } = data;
   const db = getDb();
   const snapshot = await db
@@ -44,6 +46,7 @@ export const loginEmail = async (data: LoginEmailRequest): Promise<void> => {
 
   await employeeDoc.ref.update({ accessCode: otp, accessCodeExpiry: expiry });
   await sendOtpEmail({ to: email, name: employee.name as string, otp });
+  return otp;
 };
 
 export const validateAccessCode = async (
@@ -174,5 +177,52 @@ export const verifyInvite = async (
   return {
     name: employee.name as string,
     email: employee.email as string,
+  };
+};
+
+export const loginUsername = async (
+  data: LoginUsernameRequest
+): Promise<LoginUsernameResult> => {
+  const { username, password } = data;
+  const db = getDb();
+
+  const snapshot = await db
+    .collection("employees")
+    .where("username", "==", username)
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) {
+    throw new AppError("Invalid username or password", 401);
+  }
+
+  const employeeDoc = snapshot.docs[0];
+  const employee = employeeDoc.data();
+
+  if (!employee.isSetup) {
+    throw new AppError("Account not set up yet. Please check your invite email.", 403);
+  }
+
+  const isPasswordMatch = await bcrypt.compare(password, employee.passwordHash || "");
+  if (!isPasswordMatch) {
+    throw new AppError("Invalid username or password", 401);
+  }
+
+  const token = generateToken({
+    employeeId: employeeDoc.id,
+    email: employee.email,
+    role: "employee",
+  });
+
+  return {
+    token,
+    role: "employee",
+    employee: {
+      id: employeeDoc.id,
+      name: employee.name as string,
+      email: employee.email as string,
+      department: employee.department as string,
+      role: employee.role as string,
+    },
   };
 };

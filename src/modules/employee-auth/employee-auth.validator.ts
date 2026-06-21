@@ -3,6 +3,7 @@ import type {
   LoginEmailRequest,
   SetupAccountRequest,
   ValidateAccessCodeRequest,
+  LoginUsernameRequest,
 } from "./employee-auth.model";
 
 export const loginEmailSchema = Joi.object<LoginEmailRequest>({
@@ -20,6 +21,11 @@ export const setupAccountSchema = Joi.object<SetupAccountRequest>({
   password: Joi.string().min(8).required(),
 });
 
+export const loginUsernameSchema = Joi.object<LoginUsernameRequest>({
+  username: Joi.string().trim().required(),
+  password: Joi.string().required(),
+});
+
 export const validateLoginEmail = (body: unknown) =>
   loginEmailSchema.validate(body, { abortEarly: false, stripUnknown: true });
 
@@ -31,3 +37,6 @@ export const validateValidateAccessCode = (body: unknown) =>
 
 export const validateSetupAccount = (body: unknown) =>
   setupAccountSchema.validate(body, { abortEarly: false, stripUnknown: true });
+
+export const validateLoginUsername = (body: unknown) =>
+  loginUsernameSchema.validate(body, { abortEarly: false, stripUnknown: true });

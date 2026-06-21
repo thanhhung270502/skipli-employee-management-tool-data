@@ -12,25 +12,25 @@ import type {
   ValidateAccessCodeResult,
 } from "./owner-auth.model";
 
-export const createAccessCode = async (phoneNumber: string): Promise<void> => {
+export const createAccessCode = async (phoneNumber: string): Promise<string> => {
+  const db = getDb();
+  const ownerDoc = await db.collection("owners").doc(phoneNumber).get();
+
+  if (!ownerDoc.exists) {
+    throw new AppError("Phone number not registered", 404);
+  }
+
   const otp = generateOtp();
   const expiry = getOtpExpiry();
-  const db = getDb();
 
-  await db
-    .collection("owners")
-    .doc(phoneNumber)
-    .set(
-      {
-        phoneNumber,
-        accessCode: otp,
-        accessCodeExpiry: expiry,
-        updatedAt: new Date(),
-      },
-      { merge: true }
-    );
+  await ownerDoc.ref.update({
+    accessCode: otp,
+    accessCodeExpiry: expiry,
+    updatedAt: new Date(),
+  });
 
   await sendOtpSms(phoneNumber, otp);
+  return otp;
 };
 
 export const validateAccessCode = async (

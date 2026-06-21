@@ -94,3 +94,25 @@ describe('Task validation', () => {
     expect(res.body.success).toBe(false);
   });
 });
+
+describe('Spec routes and new auth flows', () => {
+  const app = createApp();
+
+  it('POST /api/owner/CreateNewAccessCode rejects empty body', async () => {
+    const res = await request(app).post('/api/owner/CreateNewAccessCode').send({});
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it('POST /api/employee/LoginEmail rejects empty body', async () => {
+    const res = await request(app).post('/api/employee/LoginEmail').send({});
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it('POST /api/employee/login-username rejects missing fields', async () => {
+    const res = await request(app).post('/api/employee/login-username').send({ username: 'test' });
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+});
