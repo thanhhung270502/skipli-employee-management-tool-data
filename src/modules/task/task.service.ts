@@ -1,6 +1,11 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDb } from "../../common/services/firebase";
 import { AppError } from "../../common/errors/app-error";
+import type {
+  PageableResponse,
+  PaginationQueryParams,
+} from "../../common/types/pagination";
+import { paginateFirestoreQuery } from "../../common/utils/firestore-pagination.util";
 import {
   ETaskStatus,
   ETaskPriority,
@@ -8,6 +13,32 @@ import {
   type CreateTaskResult,
   type TaskPublic,
 } from "./task.model";
+
+export interface ListTasksOptions {
+  pagination?: PaginationQueryParams | null;
+  status?: ETaskStatus;
+}
+
+const mapTaskDoc = (doc: FirebaseFirestore.QueryDocumentSnapshot): TaskPublic =>
+  ({ id: doc.id, ...doc.data() } as TaskPublic);
+
+const buildTasksQuery = (
+  db: FirebaseFirestore.Firestore,
+  employeeId?: string,
+  status?: ETaskStatus
+) => {
+  let query: FirebaseFirestore.Query = db.collection("tasks");
+
+  if (employeeId) {
+    query = query.where("assignedTo", "==", employeeId);
+  }
+
+  if (status) {
+    query = query.where("status", "==", status);
+  }
+
+  return query.orderBy("createdAt", "desc");
+};
 
 export const createTask = async (
   data: CreateTaskRequest
@@ -38,40 +69,35 @@ export const createTask = async (
   return { taskId, task: { id: taskId, ...task } };
 };
 
-export const listAllTasks = async (): Promise<TaskPublic[]> => {
+export const listAllTasks = async (
+  options: ListTasksOptions = {}
+): Promise<PageableResponse<TaskPublic>> => {
   const db = getDb();
-  const snapshot = await db
-    .collection("tasks")
-    .orderBy("createdAt", "desc")
-    .get();
-  return snapshot.docs.map(
-    (doc) => ({ id: doc.id, ...doc.data() } as TaskPublic)
-  );
+  const query = buildTasksQuery(db, undefined, options.status);
+
+  if (!options.pagination) {
+    const snapshot = await query.get();
+    const data = snapshot.docs.map(mapTaskDoc);
+    return { total_record: data.length, data };
+  }
+
+  return paginateFirestoreQuery(query, options.pagination, mapTaskDoc);
 };
 
 export const listMyTasks = async (
-  employeeId: string
-): Promise<TaskPublic[]> => {
+  employeeId: string,
+  options: ListTasksOptions = {}
+): Promise<PageableResponse<TaskPublic>> => {
   const db = getDb();
-  const snapshot = await db
-    .collection("tasks")
-    .where("assignedTo", "==", employeeId)
-    .get();
+  const query = buildTasksQuery(db, employeeId, options.status);
 
-  const tasks = snapshot.docs.map(
-    (doc) => ({ id: doc.id, ...doc.data() } as TaskPublic)
-  );
+  if (!options.pagination) {
+    const snapshot = await query.get();
+    const data = snapshot.docs.map(mapTaskDoc);
+    return { total_record: data.length, data };
+  }
 
-  tasks.sort((a, b) => {
-    const getMs = (val: any) => {
-      if (!val) return 0;
-      if (typeof val.toDate === "function") return val.toDate().getTime();
-      return new Date(val).getTime() || 0;
-    };
-    return getMs(b.createdAt) - getMs(a.createdAt);
-  });
-
-  return tasks;
+  return paginateFirestoreQuery(query, options.pagination, mapTaskDoc);
 };
 
 export const markTaskInProgress = async (

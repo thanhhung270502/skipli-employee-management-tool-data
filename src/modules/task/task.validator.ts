@@ -24,3 +24,12 @@ export const validateCreateTask = (body: unknown) =>
 export const validateUpdateTask = (body: unknown) =>
   updateTaskSchema.validate(body, { abortEarly: false, stripUnknown: true });
 
+export const listTasksQuerySchema = Joi.object({
+  limit: Joi.number().integer().min(0).max(100).optional(),
+  offset: Joi.number().integer().min(0).optional(),
+  status: Joi.string().valid("pending", "in_progress", "done").optional(),
+});
+
+export const validateListTasksQuery = (query: unknown) =>
+  listTasksQuerySchema.validate(query, { abortEarly: false, stripUnknown: true });
+

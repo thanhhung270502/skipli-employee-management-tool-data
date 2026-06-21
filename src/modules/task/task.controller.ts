@@ -4,9 +4,35 @@ import {
   getValidationMessage,
   handleControllerError,
 } from "../../common/utils/controller.util";
-import { validateCreateTask, validateUpdateTask } from "./task.validator";
+import { resolvePaginationParams } from "../../common/validators/pagination.validator";
+import { validateCreateTask, validateUpdateTask, validateListTasksQuery } from "./task.validator";
 import * as taskService from "./task.service";
 import { emitTaskUpdated } from "./task.socket";
+import type { ETaskStatus } from "./task.model";
+
+const buildListTasksOptions = (query: Record<string, unknown>) => {
+  const { error, value } = validateListTasksQuery(query);
+  if (error) {
+    return { error: getValidationMessage(error) };
+  }
+
+  return {
+    options: {
+      pagination: resolvePaginationParams(value),
+      status: value.status as ETaskStatus | undefined,
+    },
+  };
+};
+
+const buildTasksResponse = (
+  result: Awaited<ReturnType<typeof taskService.listAllTasks>>,
+  pagination: ReturnType<typeof resolvePaginationParams>
+) => ({
+  success: true,
+  tasks: result.data,
+  total_record: result.total_record,
+  ...(pagination ? { limit: pagination.limit, offset: pagination.offset } : {}),
+});
 
 export const createTask = async (
   req: AuthRequest,
@@ -36,13 +62,19 @@ export const createTask = async (
 };
 
 export const listAllTasks = async (
-  _req: AuthRequest,
+  req: AuthRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const tasks = await taskService.listAllTasks();
-    res.json({ success: true, tasks });
+    const parsed = buildListTasksOptions(req.query as Record<string, unknown>);
+    if ("error" in parsed) {
+      res.status(400).json({ success: false, message: parsed.error });
+      return;
+    }
+
+    const result = await taskService.listAllTasks(parsed.options);
+    res.json(buildTasksResponse(result, parsed.options.pagination));
   } catch (err) {
     handleControllerError(err, res, next);
   }
@@ -54,9 +86,15 @@ export const listMyTasks = async (
   next: NextFunction
 ): Promise<void> => {
   try {
+    const parsed = buildListTasksOptions(req.query as Record<string, unknown>);
+    if ("error" in parsed) {
+      res.status(400).json({ success: false, message: parsed.error });
+      return;
+    }
+
     const user = req.user as JwtEmployeePayload;
-    const tasks = await taskService.listMyTasks(user.employeeId);
-    res.json({ success: true, tasks });
+    const result = await taskService.listMyTasks(user.employeeId, parsed.options);
+    res.json(buildTasksResponse(result, parsed.options.pagination));
   } catch (err) {
     handleControllerError(err, res, next);
   }

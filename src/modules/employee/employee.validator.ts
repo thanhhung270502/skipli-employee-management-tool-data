@@ -55,3 +55,12 @@ export const validateUpdateEmployee = (body: unknown) =>
 
 export const validateUpdateProfile = (body: unknown) =>
   updateProfileSchema.validate(body, { abortEarly: false, stripUnknown: true });
+
+export const listEmployeesQuerySchema = Joi.object({
+  limit: Joi.number().integer().min(0).max(100).optional(),
+  offset: Joi.number().integer().min(0).optional(),
+  search: Joi.string().trim().optional().allow(""),
+});
+
+export const validateListEmployeesQuery = (query: unknown) =>
+  listEmployeesQuerySchema.validate(query, { abortEarly: false, stripUnknown: true });

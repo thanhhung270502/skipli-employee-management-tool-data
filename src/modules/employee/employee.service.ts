@@ -3,12 +3,22 @@ import { getDb } from "../../common/services/firebase";
 import { sendEmployeeInviteEmail } from "../../common/services/email";
 import { AppError } from "../../common/errors/app-error";
 import type {
+  PageableResponse,
+  PaginationQueryParams,
+} from "../../common/types/pagination";
+import { paginateFirestoreQuery } from "../../common/utils/firestore-pagination.util";
+import type {
   CreateEmployeeRequest,
   CreateEmployeeResult,
   EmployeePublic,
   UpdateEmployeeRequest,
   UpdateProfileRequest,
 } from "./employee.model";
+
+export interface ListEmployeesOptions {
+  pagination?: PaginationQueryParams | null;
+  search?: string;
+}
 
 const toPublicEmployee = (
   id: string,
@@ -18,14 +28,53 @@ const toPublicEmployee = (
   return { id, ...safe } as EmployeePublic;
 };
 
-export const listEmployees = async (): Promise<EmployeePublic[]> => {
-  const db = getDb();
-  const snapshot = await db
-    .collection("employees")
-    .orderBy("createdAt", "desc")
-    .get();
+const matchesEmployeeSearch = (
+  employee: EmployeePublic,
+  search: string
+): boolean => {
+  const term = search.toLowerCase();
+  return (
+    employee.name.toLowerCase().includes(term) ||
+    employee.email.toLowerCase().includes(term) ||
+    employee.department.toLowerCase().includes(term)
+  );
+};
 
-  return snapshot.docs.map((doc) => toPublicEmployee(doc.id, doc.data()));
+export const listEmployees = async (
+  options: ListEmployeesOptions = {}
+): Promise<PageableResponse<EmployeePublic>> => {
+  const db = getDb();
+  const query = db.collection("employees").orderBy("createdAt", "desc");
+  const search = options.search?.trim();
+
+  if (search) {
+    const snapshot = await query.get();
+    const filtered = snapshot.docs
+      .map((doc) => toPublicEmployee(doc.id, doc.data()))
+      .filter((employee) => matchesEmployeeSearch(employee, search));
+
+    if (!options.pagination) {
+      return { total_record: filtered.length, data: filtered };
+    }
+
+    const { limit, offset } = options.pagination;
+    return {
+      total_record: filtered.length,
+      data: filtered.slice(offset, offset + limit),
+    };
+  }
+
+  if (!options.pagination) {
+    const snapshot = await query.get();
+    const data = snapshot.docs.map((doc) =>
+      toPublicEmployee(doc.id, doc.data())
+    );
+    return { total_record: data.length, data };
+  }
+
+  return paginateFirestoreQuery(query, options.pagination, (doc) =>
+    toPublicEmployee(doc.id, doc.data())
+  );
 };
 
 export const getEmployee = async (

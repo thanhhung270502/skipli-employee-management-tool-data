@@ -8,18 +8,52 @@ import {
   validateCreateEmployee,
   validateUpdateEmployee,
   validateUpdateProfile,
+  validateListEmployeesQuery,
 } from "./employee.validator";
 import * as employeeService from "./employee.service";
 import { listMyTasks } from "../task/task.service";
+import { resolvePaginationParams } from "../../common/validators/pagination.validator";
+import { validateListTasksQuery } from "../task/task.validator";
+import type { ETaskStatus } from "../task/task.model";
+
+const buildListEmployeesOptions = (query: Record<string, unknown>) => {
+  const { error, value } = validateListEmployeesQuery(query);
+  if (error) {
+    return { error: getValidationMessage(error) };
+  }
+
+  return {
+    options: {
+      pagination: resolvePaginationParams(value),
+      search: value.search as string | undefined,
+    },
+  };
+};
+
+const buildEmployeesResponse = (
+  result: Awaited<ReturnType<typeof employeeService.listEmployees>>,
+  pagination: ReturnType<typeof resolvePaginationParams>
+) => ({
+  success: true,
+  employees: result.data,
+  total_record: result.total_record,
+  ...(pagination ? { limit: pagination.limit, offset: pagination.offset } : {}),
+});
 
 export const listEmployees = async (
-  _req: AuthRequest,
+  req: AuthRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const employees = await employeeService.listEmployees();
-    res.json({ success: true, employees });
+    const parsed = buildListEmployeesOptions(req.query as Record<string, unknown>);
+    if ("error" in parsed) {
+      res.status(400).json({ success: false, message: parsed.error });
+      return;
+    }
+
+    const result = await employeeService.listEmployees(parsed.options);
+    res.json(buildEmployeesResponse(result, parsed.options.pagination));
   } catch (err) {
     handleControllerError(err, res, next);
   }
@@ -173,8 +207,36 @@ export const getEmployeeTasks = async (
       return;
     }
 
-    const tasks = await listMyTasks(employeeId);
-    res.json({ success: true, tasks });
+    const parsed = (() => {
+      const { error, value } = validateListTasksQuery(req.query);
+      if (error) {
+        return { error: getValidationMessage(error) };
+      }
+      return {
+        options: {
+          pagination: resolvePaginationParams(value),
+          status: value.status as ETaskStatus | undefined,
+        },
+      };
+    })();
+
+    if ("error" in parsed) {
+      res.status(400).json({ success: false, message: parsed.error });
+      return;
+    }
+
+    const result = await listMyTasks(employeeId, parsed.options);
+    res.json({
+      success: true,
+      tasks: result.data,
+      total_record: result.total_record,
+      ...(parsed.options.pagination
+        ? {
+            limit: parsed.options.pagination.limit,
+            offset: parsed.options.pagination.offset,
+          }
+        : {}),
+    });
   } catch (err) {
     handleControllerError(err, res, next);
   }
